@@ -5,6 +5,8 @@
 #include <CFuncs.h>
 #include <CEscape.h>
 
+#include <cassert>
+
 CIMenuBase::
 CIMenuBase()
 {
@@ -39,6 +41,15 @@ addItem(const std::string &name)
   item->setBase(this);
 
   return item;
+}
+
+void
+CIMenuBase::
+addItem(CIMenuItem *item)
+{
+  CIMenuBox::addItem(item);
+
+  item->setBase(this);
 }
 
 void
@@ -103,11 +114,13 @@ keyPress(const CKeyEvent &event)
 
       if (col != currentCol()) continue;
 
-      std::string name = item->getName();
+      if (item->isSelectable()) {
+        std::string name = item->getName();
 
-      if (name[0] == c) {
-        setCurrentRow(pos);
-        break;
+        if (name[0] == c) {
+          setCurrentRow(pos);
+          break;
+        }
       }
 
       ++pos;
@@ -126,27 +139,61 @@ keyPress(const CKeyEvent &event)
   }
   // next column
   else if (type == CKEY_TYPE_Greater) {
-    if (currentCol() < int(getNumColumns()) - 1)
+    if (currentCol() < int(getNumColumns()) - 1) {
       setCurrentCol(currentCol() + 1);
+
+      fixRow();
+    }
   }
   // previous column
   else if (type == CKEY_TYPE_Less) {
-    if (currentCol() >= 1)
+    if (currentCol() >= 1) {
       setCurrentCol(currentCol() - 1);
+
+      fixRow();
+    }
   }
   // previous row
   else if (type == CKEY_TYPE_Up) {
     int row = currentRow();
 
-    if (row > 0)
-      setCurrentRow(row - 1);
+    if (row > 0) {
+      int row1 = row - 1;
+
+      while (row1 >= 0) {
+        CIMenuItem *item1 = getItem(row1);
+
+        if (item1 && item1->isSelectable())
+          break;
+
+        --row1;
+      }
+
+      if (row1 >= 0)
+        setCurrentRow(row1);
+    }
   }
   // next row
   else if (type == CKEY_TYPE_Down) {
     int row = currentRow();
 
-    if (row < int(getNumRows()))
-      setCurrentRow(row + 1);
+    int nr = getNumRows();
+
+    if (row < nr - 1) {
+      int row1 = row + 1;
+
+      while (row1 < nr) {
+        CIMenuItem *item1 = getItem(row1);
+
+        if (item1 && item1->isSelectable())
+          break;
+
+        ++row1;
+      }
+
+      if (row1 < nr)
+        setCurrentRow(row1);
+    }
   }
   // enter
   else if (type == CKEY_TYPE_Right) {
@@ -165,13 +212,32 @@ keyPress(const CKeyEvent &event)
   }
 }
 
+uint
+CIMenuBase::
+getNumColumns() const
+{
+  if (numColumns_ > 0)
+    return numColumns_;
+
+  if (items().empty())
+    return 0;
+
+  numColumns_ = 1;
+
+  for (const auto &item : items()) {
+    numColumns_ = std::max(numColumns_, item->getColumn());
+  }
+
+  return numColumns_;
+}
+
 void
 CIMenuBase::
 drawItems()
 {
   updateState();
 
-  initItems();
+  initDrawItems();
 
   //---
 
@@ -180,22 +246,12 @@ drawItems()
 
   //---
 
-  // update current row
-  uint num_rows = getNumRows();
-
-  int row = currentRow();
-
-  if (row <  0            ) setCurrentRow(0);
-  if (row >= int(num_rows)) setCurrentRow(num_rows - 1);
-
-  //---
-
   // draw box
   if (borderStyle() != BorderStyle::NONE) {
-    int c1 = getColPos(0) - 1;
+    int c1 = getColPos(0) - 3;
     int c2 = getColPos(getNumColumns());
     int r1 = getRowPos(0) - 1;
-    int r2 = getRowPos(getNumRows());
+    int r2 = getRowPos(getMaxRows());
 
     drawBox(r1, c1, r2, c2);
   }
@@ -213,7 +269,85 @@ drawItems()
 
   //---
 
-  termItems();
+  termDrawItems();
+}
+
+void
+CIMenuBase::
+initDrawItems()
+{
+  using ColumnRowCount = std::map<int,int>;
+
+  ColumnRowCount columnRowCount;
+
+  for (const auto &item : items()) {
+    int col = item->getColumn();
+    int row = 1;
+
+    for (int ic = 0; ic < item->getColumnSpan(); ++ic) {
+      auto p = columnRowCount.find(col + ic);
+
+      if (p == columnRowCount.end())
+        p = columnRowCount.insert(p, ColumnRow::value_type(col + ic, 0));
+
+      ++(*p).second;
+
+      if (ic == 0)
+        row = (*p).second;
+    }
+
+    item->setRow(row);
+  }
+
+  //---
+
+  // update current row
+  int nr = getNumRows();
+
+  int row = currentRow();
+
+  if      (row < 0)
+    setCurrentRow(0);
+  else if (row >= nr)
+    setCurrentRow(nr - 1);
+
+  fixRow();
+}
+
+void
+CIMenuBase::
+termDrawItems()
+{
+}
+
+void
+CIMenuBase::
+fixRow()
+{
+  int nr = getNumRows();
+
+  int row = currentRow();
+
+  while (row < nr) {
+    CIMenuItem *item1 = getItem(row);
+
+    if (item1 && item1->isSelectable())
+      break;
+
+    ++row;
+  }
+
+  while (row >= 0) {
+    CIMenuItem *item1 = getItem(row);
+
+    if (item1 && item1->isSelectable())
+      break;
+
+    --row;
+  }
+
+  if (row >= 0)
+    setCurrentRow(row);
 }
 
 void
@@ -249,13 +383,7 @@ CIMenuBase::
 drawItem(CIMenuItem *item) const
 {
   int col = item->getColumn() - 1;
-
-  int row = 0;
-
-  auto p = currentColRow_.find(col);
-
-  if (p != currentColRow_.end())
-    row = (*p).second;
+  int row = item->getRow   () - 1;
 
   int rpos = getRowPos(row);
   int cpos = getColPos(col);
@@ -272,7 +400,7 @@ CIMenuBase::
 drawCursor() const
 {
   int rpos = getRowPos(currentRow());
-  int cpos = getColPos(currentCol()) - 2;
+  int cpos = getColPos(currentCol()) - 1;
 
   COSRead::write(1, CEscape::CUP(rpos, cpos));
 
@@ -305,16 +433,18 @@ getColPos(int col) const
     ++c;
 
   if (col > 0) {
-    // column contents + gap
-    c += col*(columnWidth() + 2);
+    // column contents + 2*gap (1)
+    c += col*(columnWidth() + 3);
 
-    // check (TODO: per column
+    // check (TODO: per column)
     if (isCheckable())
       c += col*4;
 
     if (borderStyle() != BorderStyle::NONE)
       c += col;
   }
+
+  c += 2; // cursor
 
   return c;
 }
@@ -337,20 +467,27 @@ CIMenuItem *
 CIMenuBase::
 getItem(int row, int col) const
 {
-  int pos = 0;
-
   for (const auto &item : items()) {
+    int row1 = item->getRow   () - 1;
     int col1 = item->getColumn() - 1;
 
-    if (col != col1) continue;
-
-    if (pos == row)
+    if (row == row1 && col == col1)
       return item;
-
-    ++pos;
   }
 
-  return NULL;
+  return nullptr;
+}
+
+uint
+CIMenuBase::
+getMaxRows() const
+{
+  int row = 0;
+
+  for (const auto &item : items())
+    row = std::max(row, item->getRow());
+
+  return row;
 }
 
 uint
@@ -427,6 +564,8 @@ CIMenuBox::
 addItem(CIMenuItem *item)
 {
   items_.push_back(item);
+
+  numColumns_ = -1;
 }
 
 //-------------
@@ -435,7 +574,17 @@ void
 CIMenuItem::
 draw()
 {
-  if (base_ && base_->isCheckable()) {
+  assert(base_);
+
+  int col = getColumn() - 1;
+  int row = getRow   () - 1;
+
+  int rpos = base_->getRowPos(row);
+  int cpos = base_->getColPos(col);
+
+  COSRead::write(1, CEscape::CUP(rpos, cpos));
+
+  if (base_->isCheckable()) {
     COSRead::write(1, CEscape::SGR(31) + " [");
 
     if (isChecked())
@@ -461,4 +610,31 @@ press()
     if (base_)
       base_->drawItems();
   }
+}
+
+//-------------
+
+void
+CIMenuText::
+draw()
+{
+  assert(base_);
+
+  int col = getColumn() - 2;
+  int row = getRow   () - 1;
+
+  int rpos = base_->getRowPos(row);
+  int cpos = base_->getColPos(col);
+
+  COSRead::write(1, CEscape::CUP(rpos, cpos));
+
+  std::string name = getName();
+
+  COSRead::write(1, CEscape::SGR(31) + name + CEscape::SGR(0));
+}
+
+void
+CIMenuText::
+press()
+{
 }

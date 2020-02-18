@@ -9,10 +9,10 @@ main(int argc, char **argv)
 
   using Items = std::vector<std::string>;
 
-  Items items;
-  bool  checkable = false;
-  bool  border    = false;
-  int   width     = 0;
+  std::string title;
+  Items       items;
+  bool        checkable = false;
+  bool        border    = false;
 
   for (int i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
@@ -22,6 +22,16 @@ main(int argc, char **argv)
         checkable = true;
       else if (arg == "border")
         border = true;
+      else if (arg == "title") {
+        ++i;
+
+        if (i < argc)
+          title = argv[i];
+        else {
+          std::cerr << "Missing value for '-" << arg << "'\n";
+          exit(1);
+        }
+      }
       else {
         std::cerr << "Invalid arg '" << arg << "'\n";
         exit(1);
@@ -29,8 +39,6 @@ main(int argc, char **argv)
     }
     else {
       std::string item = argv[i];
-
-      width = std::max(width, int(items.size()));
 
       items.push_back(item);
     }
@@ -46,10 +54,64 @@ main(int argc, char **argv)
   if (checkable)
     menu->setCheckable(true);
 
+  //---
+
+  // set width
+  int width     = 0;
+  int maxColumn = 1;
+
+  for (const auto &item : items) {
+    auto p = item.find(':');
+
+    if (p != std::string::npos) {
+      try {
+        int column = std::stoi(item.substr(p + 1));
+
+        maxColumn = std::max(maxColumn, column);
+
+        width = std::max(width, int(p));
+      }
+      catch (...) {
+        width = std::max(width, int(item.size()));
+      }
+    }
+    else {
+      width = std::max(width, int(item.size()));
+    }
+  }
+
   menu->setColumnWidth(width + 2);
 
-  for (const auto &item : items)
-    menu->addItem(item);
+  //---
+
+  if (! title.empty()) {
+    CIMenuText *menuText = new CIMenuText(title);
+
+    menuText->setColumnSpan(maxColumn);
+
+    menu->addItem(menuText);
+  }
+
+  for (const auto &item : items) {
+    auto p = item.find(':');
+
+    if (p != std::string::npos) {
+      try {
+        int column = std::stoi(item.substr(p + 1));
+
+        CIMenuItem *menuItem = menu->addItem(item.substr(0, p));
+
+        if (menuItem)
+          menuItem->setColumn(column);
+      }
+      catch (...) {
+        menu->addItem(item);
+      }
+    }
+    else {
+      menu->addItem(item);
+    }
+  }
 
   menu->mainLoop();
 
