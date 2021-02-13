@@ -40,8 +40,8 @@ class CTermApp {
   bool            mouse_     { false };
   bool            autoExit_  { true };
   bool            done_      { false };
-  bool            in_escape_ { false };
-  std::string     escape_string_;
+  bool            inEscape_  { false };
+  std::string     escapeString_;
   struct termios *ios_       { nullptr };
 };
 

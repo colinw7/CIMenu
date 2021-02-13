@@ -57,13 +57,15 @@ void
 CTermApp::
 processString(const std::string &str)
 {
-  static int press_button = 0;
+  inEscape_ = false;
 
-  in_escape_ = false;
-
-  uint i = 0;
-
+  uint i   = 0;
   uint len = str.size();
+
+  //---
+
+  // process mouse (only if mouse enabled ?)
+  static int pressButton = 0;
 
   int  button, col, row;
   bool release;
@@ -93,10 +95,10 @@ processString(const std::string &str)
 
       mousePress(event);
 
-      press_button = button;
+      pressButton = button;
     }
     else {
-      CMouseEvent event(pos, (CMouseButton) (press_button + 1));
+      CMouseEvent event(pos, (CMouseButton) (pressButton + 1));
 
       mouseRelease(event);
     }
@@ -104,9 +106,13 @@ processString(const std::string &str)
     return;
   }
 
+  //---
+
   // skip status report
   if (len > 8 && str[0] == '' && str[1] == '[' && str[len - 1] == 't')
     return;
+
+  //---
 
   for (uint pos = 0; pos < len; ++pos) {
     if (processStringChar(str[pos]))
@@ -128,17 +134,17 @@ bool
 CTermApp::
 processStringChar(unsigned char c)
 {
-  if (c == '') {
+  if (c == '') { // control backslash
     resetRaw(STDIN_FILENO);
     exit(1);
   }
 
   CKeyEvent event;
 
-  if (! in_escape_) {
+  if (! inEscape_) {
     if (c == '\033') {
-      in_escape_     = true;
-      escape_string_ = std::string((char *) &c, 1);
+      inEscape_     = true;
+      escapeString_ = std::string((char *) &c, 1);
       return false;
     }
 
@@ -147,9 +153,9 @@ processStringChar(unsigned char c)
     return true;
   }
   else {
-    escape_string_ += c;
+    escapeString_ += c;
 
-    CStrParse parse(escape_string_);
+    CStrParse parse(escapeString_);
 
     if (! parse.isChar(''))
       return false;
@@ -190,7 +196,7 @@ processStringChar(unsigned char c)
       event.setType(CKEY_TYPE_Left);
     }
 
-    in_escape_ = false;
+    inEscape_ = false;
 
     keyPress(event);
 

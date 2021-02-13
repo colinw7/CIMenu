@@ -294,11 +294,11 @@ class CIMenuApp : public CTermApp {
    menu_(menu) {
   }
 
-  void redraw() {
+  void redraw() override {
     menu_->drawItems();
   }
 
-  void keyPress(const CKeyEvent &event) {
+  void keyPress(const CKeyEvent &event) override {
     menu_->keyPress(event);
   }
 

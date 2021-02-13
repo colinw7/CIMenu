@@ -99,7 +99,7 @@ main(int argc, char **argv)
       try {
         int column = std::stoi(item.substr(p + 1));
 
-        CIMenuItem *menuItem = menu->addItem(item.substr(0, p));
+        auto *menuItem = menu->addItem(item.substr(0, p));
 
         if (menuItem)
           menuItem->setColumn(column);
