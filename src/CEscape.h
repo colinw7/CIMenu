@@ -18,10 +18,10 @@ namespace CEscape {
     CHAR_SIZE          = 8,
     MAXIMIZE           = 9,
     REPORT_STATE       = 11,
-    REPORT_POS         = MOVE       + 10,
-    REPORT_PIXEL_SIZE  = PIXEL_SIZE + 10,
-    REPORT_CHAR_SIZE   = CHAR_SIZE  + 10,
-    REPORT_SCREEN_SIZE = MAXIMIZE   + 10,
+    REPORT_POS         = MOVE       + 10, // 13 ; cursor pos
+    REPORT_PIXEL_SIZE  = PIXEL_SIZE + 10, // 14 ; window size in pixel
+    REPORT_CHAR_SIZE   = CHAR_SIZE  + 10, // 18 ; window size in characters
+    REPORT_SCREEN_SIZE = MAXIMIZE   + 10, // 19 ; screen size in characters
     REPORT_ICON_STR    = 20,
     REPORT_TITLE_STR   = 21,
     LINE_SIZE_24       = 24
@@ -117,6 +117,7 @@ namespace CEscape {
 
   bool decodeWindowOp(const std::string &str, WindowOp &op, std::string &arg1, std::string &arg2);
 
+  std::string osc();
   std::string oscIconWindowTitle(const std::string &str);
   std::string oscIconTitle(const std::string &str);
   std::string oscWindowTitle(const std::string &str);
@@ -126,6 +127,8 @@ namespace CEscape {
   std::string oscBg(const std::string &str);
   std::string oscCursorColor(const std::string &str);
   std::string oscFont(const std::string &str);
+
+  std::string st();
 
   std::string DECSC();
   std::string DECRC();
@@ -172,8 +175,17 @@ namespace CEscape {
   std::string RM(int n=-1);
   std::string DECRST(int n=-1);
   std::string DECRST(int n1, int n2);
+
+  // SGR general (single number)
   std::string SGR(int n=-1);
-  std::string SGR(int n, int r, int g, int b);
+  // SGR background color (color index or rgb)
+  std::string SGR_bg(int n);
+  std::string SGR_bg(int r, int g, int b);
+  // SGR foreground color (color index or rgb)
+  std::string SGR_fg(int n);
+  std::string SGR_fg(int r, int g, int b);
+//std::string SGR(int n, int r, int g, int b);
+
   std::string DSR(int n=-1);
   std::string DECDSR(int n=-1);
   std::string DECSTR();
@@ -195,7 +207,7 @@ namespace CEscape {
   std::string DECSERA(int top=-1, int left=-1, int bottom=-1, int right=-1);
   std::string DECRQLP(int n=-1);
 
-  std::string DECSCNM(bool b=true);
+  std::string DECSCNM(bool b=true); // set/reset inverse video
   std::string DECTEK(bool b=true);
 
   void        APC(std::ostream &os, const std::string &str);
@@ -228,7 +240,17 @@ namespace CEscape {
   bool getWindowCharSize(int *rows, int *cols);
   bool getWindowPixelSize(int *width, int *height);
 
+  bool getWindowPos(int *row, int *col);
+
+  //---
+
   std::string readResult();
+
+  void setReadResultTime(int secs, int msecs);
+
+  void setLogResult(bool b);
+
+  //---
 
   bool parseEscape(const std::string &str, std::vector<std::string> &args);
 
