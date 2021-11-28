@@ -73,7 +73,7 @@ processString(const std::string &str)
   if (len == 6 && CEscape::parseMouse(str, &button, &col, &row, &release)) {
     int rows, cols, width, height;
 
-    if (! CEscape::getWindowCharSize (&rows, &cols))
+    if (! CEscape::getWindowCharSize(&rows, &cols))
       return;
 
     if (! CEscape::getWindowPixelSize(&width, &height))
