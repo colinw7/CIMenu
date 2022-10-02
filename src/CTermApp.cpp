@@ -38,7 +38,7 @@ mainLoop()
 
     if (! COSRead::read(STDIN_FILENO, buffer)) continue;
 
-    uint len = buffer.size();
+    uint len = uint(buffer.size());
 
     if (len == 0) continue;
 
@@ -60,7 +60,7 @@ processString(const std::string &str)
   inEscape_ = false;
 
   uint i   = 0;
-  uint len = str.size();
+  uint len = uint(str.size());
 
   //---
 
@@ -91,14 +91,14 @@ processString(const std::string &str)
     CIPoint2D pos(x1, y1);
 
     if (! release) {
-      CMouseEvent event(pos, (CMouseButton) (button + 1));
+      CMouseEvent event(pos, CMouseButton(button + 1));
 
       mousePress(event);
 
       pressButton = button;
     }
     else {
-      CMouseEvent event(pos, (CMouseButton) (pressButton + 1));
+      CMouseEvent event(pos, CMouseButton(pressButton + 1));
 
       mouseRelease(event);
     }
@@ -144,7 +144,7 @@ processStringChar(unsigned char c)
   if (! inEscape_) {
     if (c == '\033') {
       inEscape_     = true;
-      escapeString_ = std::string((char *) &c, 1);
+      escapeString_ = std::string(reinterpret_cast<const char *>(&c), 1);
       return false;
     }
 
@@ -342,7 +342,7 @@ processChar(unsigned char c)
   }
 
   if (c >= ' ' && c <= '}')
-    event.setText(std::string((char *) &c, 1));
+    event.setText(std::string(reinterpret_cast<char *>(&c), 1));
 
   keyPress(event);
 }

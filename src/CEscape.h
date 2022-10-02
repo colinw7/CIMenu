@@ -33,8 +33,8 @@ namespace CEscape {
      valid(false) {
     }
 
-    OptString(const std::string &str) :
-     valid(true), str(str) {
+    OptString(const std::string &str1) :
+     valid(true), str(str1) {
     }
 
     bool        valid { false };

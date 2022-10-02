@@ -533,7 +533,7 @@ std::string
 CEscape::
 windowOpResizeNLines(int n)
 {
-  return windowOp((WindowOp) n);
+  return windowOp(WindowOp(n));
 }
 
 // CSI <op>;<arg1>;<arg2>t : window_op <op>
@@ -559,14 +559,13 @@ bool
 CEscape::
 decodeWindowOp(const std::string &str, WindowOp &op, std::string &arg1, std::string &arg2)
 {
-  int len = str.size();
-
+  auto len = str.size();
   if (len < 3) return false;
 
   if (str[0] != '\033' || str[1] != '[' || str[len - 1] != 't')
     return false;
 
-  int i = 2;
+  uint i = 2;
 
   std::vector<std::string> args;
 
@@ -582,17 +581,15 @@ decodeWindowOp(const std::string &str, WindowOp &op, std::string &arg1, std::str
     args.push_back(arg);
   }
 
-  uint num_args = args.size();
-
-  if (num_args < 1)
-    return false;
+  auto num_args = args.size();
+  if (num_args < 1) return false;
 
   int op_num;
 
   if (! CStrUtil::toInteger(args[0], &op_num))
     return false;
 
-  op = (WindowOp) op_num;
+  op = WindowOp(op_num);
 
   if (i != len - 1)
     return false;
@@ -1438,7 +1435,7 @@ stringToOptEscape(const std::string &str)
 
   CStrUtil::addFields(str, words, ";");
 
-  uint num_words = words.size();
+  auto num_words = words.size();
 
   if      (words[0] == "NUL") return NUL();
   else if (words[0] == "SOH") return SOH();  // Ctrl A
@@ -2018,7 +2015,7 @@ std::string
 CEscape::
 stringCSIOpToEscape(const std::vector<std::string> &words)
 {
-  uint num_words = words.size();
+  auto num_words = words.size();
 
   if (num_words == 1)
     return CSI();
@@ -2222,15 +2219,16 @@ getWindowCharSize(int *rows, int *cols)
   std::vector<std::string> args;
 
   if (parseEscape(result, args)) {
-    uint num_args = args.size();
+    auto num_args = args.size();
 
     // CSI 8 ; <r> ; <c> t
     if (num_args == 3 && CStrUtil::isInteger(args[0]) &&
         CStrUtil::isInteger(args[1]) && CStrUtil::isInteger(args[2])) {
-      int t = CStrUtil::toInteger(args[0]); if (t != 8) return false;
+      int t = int(CStrUtil::toInteger(args[0]));
+      if (t != 8) return false;
 
-      *rows = CStrUtil::toInteger(args[1]);
-      *cols = CStrUtil::toInteger(args[2]);
+      *rows = int(CStrUtil::toInteger(args[1]));
+      *cols = int(CStrUtil::toInteger(args[2]));
 
       return true;
     }
@@ -2251,15 +2249,16 @@ getWindowPixelSize(int *width, int *height)
   std::vector<std::string> args;
 
   if (parseEscape(result, args)) {
-    uint num_args = args.size();
+    auto num_args = args.size();
 
     // CSI 4 ; <h> ; <w> t
     if (num_args == 3 && CStrUtil::isInteger(args[0]) &&
         CStrUtil::isInteger(args[1]) && CStrUtil::isInteger(args[2])) {
-      int t = CStrUtil::toInteger(args[0]); if (t != 4) return false;
+      int t = int(CStrUtil::toInteger(args[0]));
+      if (t != 4) return false;
 
-      *width  = CStrUtil::toInteger(args[2]);
-      *height = CStrUtil::toInteger(args[1]);
+      *width  = int(CStrUtil::toInteger(args[2]));
+      *height = int(CStrUtil::toInteger(args[1]));
 
       return true;
     }
@@ -2280,12 +2279,12 @@ getWindowPos(int *row, int *col)
   std::vector<std::string> args;
 
   if (parseEscape(result, args)) {
-    uint num_args = args.size();
+    auto num_args = args.size();
 
     // CSI <row> ; <col> R
     if (num_args == 2 && CStrUtil::isInteger(args[0]) && CStrUtil::isInteger(args[1])) {
-      *row = CStrUtil::toInteger(args[0]);
-      *col = CStrUtil::toInteger(args[1]);
+      *row = int(CStrUtil::toInteger(args[0]));
+      *col = int(CStrUtil::toInteger(args[1]));
 
       return true;
     }
@@ -2340,14 +2339,13 @@ bool
 CEscape::
 parseEscape(const std::string &str, std::vector<std::string> &args)
 {
-  int len = str.size();
-
+  auto len = str.size();
   if (len < 3) return false;
 
   if (str[0] != '' || str[1] != '[' || ! isalpha(str[len - 1]))
     return false;
 
-  int i = 2;
+  uint i = 2;
 
   while (i < len && ! isalpha(str[i])) {
     std::string arg;
@@ -2390,7 +2388,7 @@ std::string
 CEscape::
 tek4014Coord(uint x, uint y)
 {
-  static unsigned char lloy = -1, lhix = -1, lhiy = -1, leb = -1;
+  static uchar lloy = uchar(-1), lhix = uchar(-1), lhiy = uchar(-1), leb = uchar(-1);
 
   if (x > 4095)
     x = 4095;
@@ -2403,7 +2401,7 @@ tek4014Coord(uint x, uint y)
   uchar hix = (x >> 7) & 0x1f;
   uchar lox = (x >> 2) & 0x1f;
 
-  uchar eb = (x & 3) | ((y & 3) << 2);
+  uchar eb = uchar((x & 3) | ((y & 3) << 2));
 
   std::string str;
 
@@ -2436,9 +2434,9 @@ parseInteger(const std::vector<std::string> &words, int pos, int *i, bool opt)
 {
   if (! checkNumArgs(words, pos + 1, opt)) return false;
 
-  if (! CStrUtil::toInteger(words[pos], i)) {
+  if (! CStrUtil::toInteger(words[uint(pos)], i)) {
     if (! opt)
-      std::cerr << "Invalid integer: " <<  words[pos] << std::endl;
+      std::cerr << "Invalid integer: " <<  words[uint(pos)] << std::endl;
     return false;
   }
 
@@ -2448,7 +2446,7 @@ parseInteger(const std::vector<std::string> &words, int pos, int *i, bool opt)
 static bool
 checkNumArgs(const std::vector<std::string> &args, int num, bool opt)
 {
-  if ((int) args.size() < num) {
+  if (int(args.size()) < num) {
     if (! opt)
       std::cerr << "Wrong number of arguments: got " <<
                    args.size() << " need at least " << num + 1 << std::endl;

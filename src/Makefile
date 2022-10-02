@@ -26,7 +26,7 @@ CEscape.cpp \
 OBJS = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(SRC))
 
 CPPFLAGS = \
--std=c++14 \
+-std=c++17 \
 -I$(INC_DIR) \
 -I../../CMath/include \
 -I../../CFile/include \
