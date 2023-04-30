@@ -214,7 +214,7 @@ namespace CEscape {
   std::string APC(const std::string &str);
 
   void        CSI(std::ostream &os, const std::string &str, bool bit8=false);
-  std::string CSI(const std::string &str=0, bool bit8=false);
+  std::string CSI(const std::string &str="", bool bit8=false);
 
   std::string stringToEscape(const std::string &str);
   bool stringToEscape(const std::string &str, std::string &escapeStr);
