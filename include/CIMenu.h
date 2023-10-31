@@ -244,7 +244,7 @@ class CIMenuBase : public CIMenuBox {
   void keyPress(const CKeyEvent &event);
 
  public:
-  // display items and handle user inpu
+  // display items and handle user input
   void mainLoop();
 
   // get user command
